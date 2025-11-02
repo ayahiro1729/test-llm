@@ -19,38 +19,61 @@ export async function generateWithOpenAI(
   });
 
   try {
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
+    const inputs: Array<{
+      role: 'system' | 'user';
+      content: Array<{ type: 'input_text'; text: string }>;
+    }> = [];
 
-    // システムプロンプトがあれば追加
     if (prompt.systemPrompt) {
-      messages.push({
+      inputs.push({
         role: 'system',
-        content: prompt.systemPrompt,
+        content: [
+          {
+            type: 'input_text',
+            text: prompt.systemPrompt,
+          },
+        ],
       });
     }
 
-    // ユーザープロンプトを追加
-    messages.push({
+    inputs.push({
       role: 'user',
-      content: prompt.userPrompt,
+      content: [
+        {
+          type: 'input_text',
+          text: prompt.userPrompt,
+        },
+      ],
     });
 
-    const completion = await openai.chat.completions.create({
+    const params: Record<string, unknown> = {
       model: config.model,
-      messages: messages,
-      temperature: config.temperature,
-      max_tokens: config.maxTokens,
-    });
+      input: inputs,
+    };
 
-    const content = completion.choices[0]?.message?.content || '';
+    if (config.temperature !== undefined) {
+      params.temperature = config.temperature;
+    }
+
+    if (config.maxTokens !== undefined) {
+      params.max_output_tokens = config.maxTokens;
+    }
+
+    if (config.tools?.includes('web_search')) {
+      params.tools = [{ type: 'web_search' as const }];
+    }
+
+    const completion = await openai.responses.create(params as any);
+
+    const content = completion.output_text ?? '';
 
     return {
       provider: 'openai',
       model: config.model,
       content: content,
       usage: {
-        promptTokens: completion.usage?.prompt_tokens,
-        completionTokens: completion.usage?.completion_tokens,
+        promptTokens: completion.usage?.input_tokens,
+        completionTokens: completion.usage?.output_tokens,
         totalTokens: completion.usage?.total_tokens,
       },
       timestamp: new Date(),
@@ -62,4 +85,3 @@ export async function generateWithOpenAI(
     throw error;
   }
 }
-

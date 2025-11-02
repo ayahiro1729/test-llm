@@ -1,7 +1,11 @@
 /**
  * サポートされているLLMプロバイダー
  */
-export type Provider = 'gemini' | 'openai';
+export type Provider =
+  | 'gemini'
+  | 'openai'
+  | 'perplexity'
+  | 'tavily'
 
 /**
  * モデル設定
@@ -11,6 +15,7 @@ export interface ModelConfig {
   model: string;
   temperature?: number;
   maxTokens?: number;
+  tools?: ToolType[];
 }
 
 /**
@@ -34,4 +39,16 @@ export interface ModelResponse {
 export interface PromptConfig {
   systemPrompt?: string;
   userPrompt: string;
+  variables?: Record<string, string | number>;
 }
+
+/**
+ * ツール設定
+ * - OpenAI: 'web_search'
+ * - Gemini: { googleSearch: { ... } }
+ */
+export type ToolType =
+  | 'web_search'
+  | {
+      googleSearch: Record<string, unknown>;
+    };
